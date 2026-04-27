@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: __POD_NAME__
+  namespace: __NAMESPACE__
+  labels:
+    app: podrunner
+    owner: __OWNER__
+spec:
+  restartPolicy: Never
+  containers:
+    - name: main
+      image: python:3.11-slim
+      command: ["sh", "-c", "mkdir -p /work && sleep infinity"]
+      workingDir: /work
+      env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+__ENV_FROM__
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
