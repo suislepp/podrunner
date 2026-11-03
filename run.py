@@ -5,6 +5,7 @@
                 [--dry-run] [-- args for the script]
 """
 import argparse
+import ast
 import getpass
 import json
 import os
@@ -14,7 +15,6 @@ import shlex
 import string
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
 
 from pod.wheels import wheels_for
@@ -28,6 +28,7 @@ COMMANDS = {
 }
 SQL_DEPENDENCIES = ["psycopg[binary]", "sqlparse"]
 SCRIPT_BLOCK = r"(?m)^# /// script$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
+DEPENDENCIES_LIST = r"(?ms)^dependencies\s*=\s*(\[.*?\])\s*$"
 
 
 def dependencies(file):
@@ -36,9 +37,10 @@ def dependencies(file):
     block = re.search(SCRIPT_BLOCK, file.read_text(encoding="utf-8")) if file.suffix == ".py" else None
     if not block:
         return []
-    toml = "".join(line[2:] if line.startswith("# ") else line[1:]
-                   for line in block["content"].splitlines(keepends=True))
-    return tomllib.loads(toml).get("dependencies", [])
+    content = "".join(line[2:] if line.startswith("# ") else line[1:]
+                      for line in block["content"].splitlines(keepends=True))
+    found = re.search(DEPENDENCIES_LIST, content)
+    return ast.literal_eval(found[1]) if found else []
 
 
 def env_entries(envs, secrets):

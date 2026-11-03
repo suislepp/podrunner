@@ -4,7 +4,7 @@ Runs a Python or SQL file in a fresh pod inside a k8s cluster, next to the datab
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.9+
 - `kubectl`, with a kubeconfig for the cluster
 - For SQL: the connection as Postgres's standard env vars `PGHOST`, `PGUSER`, `PGPASSWORD` (plus `PGDATABASE`, default the user's name, and `PGPORT`, default 5432), given with the flags below
 
