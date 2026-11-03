@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Runs a .sql file in the pod the way `psql -v ON_ERROR_STOP=1 -f` would: statement by statement,
 each saved as it runs unless the file wraps it in BEGIN ... COMMIT, stopping at the first error.
-Rows a statement returns are printed and saved to result_<n>.csv. run.py copies this into the pod."""
+Rows a statement returns are printed and saved to result_<n>.csv. run.py copies this into the pod.
+Connects with Postgres's standard env vars: PGHOST, PGUSER, PGPASSWORD, PGDATABASE, PGPORT."""
 import csv
-import os
 import sys
 from pathlib import Path
 
@@ -15,19 +15,12 @@ statements = [s for s in sqlparse.split(file.read_text(encoding="utf-8"))
               if sqlparse.format(s, strip_comments=True).strip()]
 
 try:
-    conn = psycopg.connect(
-        host=os.environ["DB_HOST"],
-        port=os.environ.get("DB_PORT", "5432"),
-        user=os.environ["DB_USER"],
-        password=os.environ["DB_PASSWORD"],
-        dbname=os.environ.get("DB_NAME", "postgres"),
-        connect_timeout=10,
-        autocommit=True,
-    )
+    conn = psycopg.connect(connect_timeout=10, autocommit=True)
 except psycopg.OperationalError as e:
-    sys.exit(f"error: could not connect to {os.environ['DB_HOST']}: {e}")
+    sys.exit(f"error: could not connect: {e}")
 conn.add_notice_handler(lambda d: print(f"    {d.severity}: {d.message_primary}"))
-print(f"connected to {os.environ['DB_HOST']}, running {len(statements)} statements from {file.name}")
+print(f"connected to {conn.info.host} as {conn.info.user}, database {conn.info.dbname}, "
+      f"running {len(statements)} statements from {file.name}")
 
 with conn.cursor() as cur:
     for n, statement in enumerate(statements, 1):

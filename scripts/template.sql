@@ -1,10 +1,11 @@
 -- template.sql: copy this to start a SQL job, rename it, keep what you need.
 --
--- Run:  python run.py scripts/my-job.sql -n <namespace> --secret <db-secret>
+-- Run:  python run.py scripts/my-job.sql -n <namespace> --env PGHOST=<db-host> --env PGUSER=<user> --ask PGPASSWORD
 --
--- The Secret needs DB_HOST, DB_USER, DB_PASSWORD, plus DB_NAME and DB_PORT if
--- they aren't postgres and 5432. Connection trouble: run test.sql, and
--- test.py -- <db-host>:5432 for the network.
+-- The connection comes from Postgres's standard env vars: PGHOST, PGUSER,
+-- PGPASSWORD, plus PGDATABASE (default: the user's name) and PGPORT (default 5432).
+-- Give each with --env, --ask or --secret (README, Arguments).
+-- Connection trouble: run test.sql, and test.py -- <db-host>:5432 for the network.
 --
 -- It runs like `psql -v ON_ERROR_STOP=1 -f`: statement by statement, each one
 -- saved as it runs, stopping at the first error.

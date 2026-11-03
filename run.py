@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Start a .py, .sh or .sql file in a new pod, then follow it with watch.py.
 
-  python run.py <file> -n NAMESPACE [--secret NAME] [--dry-run] [-- args for the script]
+  python run.py <file> -n NAMESPACE [--env NAME=value] [--ask NAME] [--secret NAME=secret/key]
+                [--dry-run] [-- args for the script]
 """
 import argparse
+import getpass
+import json
 import os
 import random
 import re
@@ -38,14 +41,39 @@ def dependencies(file):
     return tomllib.loads(toml).get("dependencies", [])
 
 
+def env_entries(envs, secrets):
+    entries = []
+    for e in envs:
+        name, eq, value = e.partition("=")
+        if not (name and eq):
+            sys.exit(f"error: --env {e} should look like NAME=value")
+        entries.append(f"        - name: {json.dumps(name)}\n"
+                       f"          value: {json.dumps(value)}")
+    for s in secrets:
+        name, _, ref = s.partition("=")
+        secret, _, key = ref.partition("/")
+        if not (name and secret and key):
+            sys.exit(f"error: --secret {s} should look like NAME=secret-name/key")
+        entries.append(f"        - name: {json.dumps(name)}\n"
+                       f"          valueFrom:\n"
+                       f"            secretKeyRef:\n"
+                       f"              name: {json.dumps(secret)}\n"
+                       f"              key: {json.dumps(key)}")
+    return "\n".join(entries)
+
+
 def main():
     argv = sys.argv[1:]
     split = argv.index("--") if "--" in argv else len(argv)
     p = argparse.ArgumentParser(description="Start a .py, .sh or .sql file in a new pod, then follow it with watch.py.")
     p.add_argument("file")
     p.add_argument("-n", "--namespace", required=True)
-    p.add_argument("--secret", action="append", default=[],
-                   help="k8s Secret whose keys become env vars, e.g. a database's DB_HOST, DB_USER, DB_PASSWORD; repeatable")
+    p.add_argument("--env", action="append", default=[], metavar="NAME=value",
+                   help="an env var with a value you type; repeatable")
+    p.add_argument("--ask", action="append", default=[], metavar="NAME",
+                   help="an env var whose value you're asked for, hidden, when the run starts; repeatable")
+    p.add_argument("--secret", action="append", default=[], metavar="NAME=secret/key",
+                   help="an env var taken from a key of an existing k8s Secret; repeatable")
     p.add_argument("--dry-run", action="store_true", help="print the pod manifest and stop")
     a = p.parse_args(argv[:split])
     ns = a.namespace
@@ -58,18 +86,19 @@ def main():
     user = "".join(c if c.isalnum() else "-" for c in user)[:20].strip("-") or "unknown"
     pod = f"podrunner-{user}-" + "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
     command = shlex.join(COMMANDS[file.suffix] + [f"/work/{file.name}"] + argv[split + 1:])
-    secrets = "".join(f"\n        - secretRef:\n            name: {s}" for s in a.secret)
     manifest = ((REPO / "pod" / "pod.yaml").read_text()
                 .replace("__POD_NAME__", pod)
                 .replace("__OWNER__", user)
-                .replace("__ENV_FROM__", f"      envFrom:{secrets}" if secrets else "")
+                .replace("__ENV__", env_entries(a.env, a.secret))
                 .replace("__COMMAND__", command))
     deps = dependencies(file)
     if a.dry_run:
         print(manifest)
         print(f"# packages: {', '.join(deps) or 'none'}")
+        print(f"# asked when it runs: {', '.join(a.ask) or 'nothing'}")
         return 0
 
+    asked = {name: getpass.getpass(f"{name}: ") for name in a.ask}
     wheels = wheels_for(deps) if deps else None
     context = kubectl(None, "config", "current-context", capture_output=True, text=True).stdout.strip()
     print(f"==> Cluster {context}, namespace {ns}")
@@ -90,6 +119,9 @@ def main():
                     "-r", "/tmp/wheels/requirements.txt")
         if file.suffix == ".sql":
             kubectl(ns, "cp", "sql_runner.py", f"{pod}:/tmp/sql_runner.py", cwd=REPO / "pod")
+        if asked:
+            kubectl(ns, "exec", "-i", pod, "--", "sh", "-c", "umask 077; cat > /tmp/env", text=True,
+                    input="".join(f"export {name}={shlex.quote(value)}\n" for name, value in asked.items()))
         print(f"==> Copying {file.name}")
         kubectl(ns, "cp", file.name, f"{pod}:/work/{file.name}", cwd=file.parent)
         kubectl(ns, "exec", pod, "--", "touch", "/tmp/ready")
@@ -102,6 +134,7 @@ def main():
 
     print(f"==> Started: {command}")
     print("    It runs in the pod on its own: closing the laptop or losing the connection doesn't stop it.")
+    print(f"    To follow it again later: python watch.py {pod} -n {ns}")
     return watch(pod, ns)
 
 

@@ -5,10 +5,10 @@
 """template.py: copy this to start a Python job, rename it, keep what you need.
 
 Run:
-  python run.py scripts/my-job.py -n <namespace> --secret <secret-name> -- --day 2026-11-01
+  python run.py scripts/my-job.py -n <namespace> --env API_URL=http://orders-api -- --day 2026-11-01
 
-  --secret   each key in the Secret becomes an env var
-  after --   passed to this script as its own arguments
+  --env / --ask / --secret   env vars the script reads with os.environ (README, Arguments)
+  after --                   passed to this script as its own arguments
 
 How it runs in the pod:
 - Packages: list what the script imports from outside the standard library in
@@ -20,11 +20,10 @@ How it runs in the pod:
 - print() shows up live in your terminal.
 - A non-zero exit code, or an uncaught exception, counts as a failure:
   the pod is kept so you can look inside.
-- Postgres from Python: add "psycopg[binary]" to the block, pass the database's
-  Secret with --secret, then:
+- Postgres from Python: add "psycopg[binary]" to the block, give the connection
+  as PGHOST, PGUSER, PGPASSWORD, PGDATABASE (same as for .sql files), then:
     import psycopg
-    conn = psycopg.connect(host=os.environ["DB_HOST"], user=os.environ["DB_USER"],
-                           password=os.environ["DB_PASSWORD"], dbname=os.environ.get("DB_NAME", "postgres"))
+    conn = psycopg.connect()
   Nothing is saved until conn.commit().
 """
 import argparse

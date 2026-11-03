@@ -14,13 +14,14 @@ spec:
       env:
         - name: PYTHONUNBUFFERED
           value: "1"
-__ENV_FROM__
+__ENV__
       command:
         - bash
         - -c
         - |
           echo "podrunner: waiting for run.py to copy the script in"
           timeout 1800 bash -c 'until [ -f /tmp/ready ]; do sleep 1; done' || exit 1
+          if [ -f /tmp/env ]; then . /tmp/env; rm /tmp/env; fi
           set -o pipefail
           __COMMAND__ 2>&1 | tee /work/log.txt
           echo "podrunner: finished, exit code $?"
