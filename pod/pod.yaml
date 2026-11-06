@@ -9,7 +9,7 @@ spec:
   restartPolicy: Never
   containers:
     - name: main
-      image: python:3.11-slim
+      image: python:__PYTHON_VERSION__-slim
       workingDir: /work
       env:
         - name: PYTHONUNBUFFERED

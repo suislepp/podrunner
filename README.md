@@ -4,7 +4,7 @@ Runs a Python or SQL file in a fresh pod inside a k8s cluster, next to the datab
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.10+. The pod runs the same Python version as your machine.
 - `kubectl`, with a kubeconfig for the cluster
 - For SQL: the connection as Postgres's standard env vars `PGHOST`, `PGUSER`, `PGPASSWORD` (plus `PGDATABASE`, default the user's name, and `PGPORT`, default 5432), given with the flags below
 
@@ -62,6 +62,6 @@ Comes back in `output/<pod>/`: `log.txt` with everything it printed, and every f
 python run.py migration.sql -n orders --env PGHOST=orders-pg --env PGUSER=admin --ask PGPASSWORD
 ```
 
-Asks for the password, then runs `migration.sql` against `orders-pg` as `admin`, like `psql -v ON_ERROR_STOP=1`: each statement is saved as it runs, it stops at the first error, and `BEGIN ... COMMIT` makes a block all-or-nothing. Comes back in `output/<pod>/`: `log.txt`, and `result_<n>.csv` for each statement that returned rows.
+Asks for the password, then runs `migration.sql` against `orders-pg` as `admin`. The whole file goes to Postgres as one query: it stops at the first error, and nothing before the error is saved unless a `COMMIT` came before it. `VACUUM` and `CREATE INDEX CONCURRENTLY` can't be in the file. Comes back in `output/<pod>/`: `log.txt` with each statement's status and rows.
 
 **Either way:** Ctrl+C or a dropped connection only stops the watching; the job keeps running, and `run.py` prints the `watch.py` command to pick it up again. If the job fails, the pod is kept for 24 h so you can look inside.

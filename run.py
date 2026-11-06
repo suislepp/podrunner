@@ -17,7 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from pod.wheels import wheels_for
+from pod.wheels import PYTHON_VERSION, wheels_for
 from watch import kubectl, watch
 
 REPO = Path(__file__).resolve().parent
@@ -26,7 +26,7 @@ COMMANDS = {
     ".sh": ["bash"],
     ".sql": ["python", "/tmp/sql_runner.py"],
 }
-SQL_DEPENDENCIES = ["psycopg[binary]", "sqlparse"]
+SQL_DEPENDENCIES = ["psycopg[binary]"]
 SCRIPT_BLOCK = r"(?m)^# /// script$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
 DEPENDENCIES_LIST = r"(?ms)^dependencies\s*=\s*(\[.*?\])\s*$"
 
@@ -90,6 +90,7 @@ def main():
     command = shlex.join(COMMANDS[file.suffix] + [f"/work/{file.name}"] + argv[split + 1:])
     manifest = ((REPO / "pod" / "pod.yaml").read_text()
                 .replace("__POD_NAME__", pod)
+                .replace("__PYTHON_VERSION__", PYTHON_VERSION)
                 .replace("__OWNER__", user)
                 .replace("__ENV__", env_entries(a.env, a.secret))
                 .replace("__COMMAND__", command))

@@ -7,15 +7,14 @@
 -- Give each with --env, --ask or --secret (README, Arguments).
 -- Connection trouble: run test.sql, and test.py -- <db-host>:5432 for the network.
 --
--- It runs like `psql -v ON_ERROR_STOP=1 -f`: statement by statement, each one
--- saved as it runs, stopping at the first error.
---   BEGIN ... COMMIT    nothing is saved until COMMIT; an error before it saves none of it.
+-- The whole file goes to Postgres as one query: it stops at the first error,
+-- and nothing before the error is saved unless a COMMIT came before it.
+--   BEGIN ... COMMIT    nothing is saved until COMMIT.
 --   BEGIN ... ROLLBACK  everything runs and shows its results, nothing is saved.
--- VACUUM and CREATE INDEX CONCURRENTLY can't go between BEGIN and COMMIT.
+-- VACUUM and CREATE INDEX CONCURRENTLY can't be in the file.
 --
--- Output: each statement's result is printed, and the rows of every statement
--- that returns rows go to result_<n>.csv (n is its number in the output).
--- Both come back to output/<pod>/, with log.txt.
+-- Output: each statement's status and rows are printed; they come back in
+-- output/<pod>/log.txt.
 
 BEGIN;
 
