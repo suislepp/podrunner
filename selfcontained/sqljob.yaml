@@ -7,7 +7,7 @@ spec:
   containers:
     - name: sqljob
       image: python:3.13-slim
-      command: ["sleep", "86400"]
+      command: ["sh", "-c", "until [ -f /ready ]; do sleep 1; done; python -u /sql_job.py"]
       envFrom:
         - secretRef:
             name: orders-db

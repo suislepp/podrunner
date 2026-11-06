@@ -5,9 +5,9 @@ kubectl -n NS wait --for=condition=Ready pod/sqljob --timeout=5m
 kubectl -n NS cp wheels sqljob:/tmp/wheels
 kubectl -n NS exec sqljob -- pip install -q --no-index --find-links /tmp/wheels "psycopg[binary]"
 kubectl -n NS cp sql_job.py sqljob:/sql_job.py
-kubectl -n NS exec sqljob -- sh -c "nohup python -u /sql_job.py > /log.txt 2>&1 &"
-kubectl -n NS exec sqljob -- tail -f /log.txt
-kubectl -n NS cp sqljob:/log.txt log.txt
+kubectl -n NS exec sqljob -- touch /ready
+kubectl -n NS logs -f sqljob
+kubectl -n NS logs sqljob > log.txt
 kubectl -n NS delete pod sqljob
 """
 import os
