@@ -37,6 +37,7 @@ python watch.py <pod> -n <namespace>
 | `scripts/test.sql` | checks the login to a database: user, database, version, replica or not |
 | `scripts/template.py`, `scripts/template.sql` | starting points for your own jobs |
 | `pod/` | the pod's definition and what goes into it. Nothing to run there. |
+| `selfcontained/` | one SQL job as a single pod-side script, with the plain kubectl commands to run it by hand. Needs nothing else in this repo. |
 
 ## Examples
 
